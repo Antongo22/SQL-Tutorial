@@ -109,6 +109,34 @@ FROM User
 WHERE Name GLOB '*Wilson*';
 ```
 
+### `EXISTS`
+
+Оператор EXISTS позволяет проверять, существуют ли строки, возвращаемые подзапросом.
+
+Например, выведем всех, у кого есть заказы
+
+```sql
+SELECT *
+FROM User u
+WHERE EXISTS (
+    SELECT 1
+    FROM Orders o
+    WHERE o.UserId = u.Id
+);
+```
+
+Или же выведем всех, у кого нет заказов
+
+```sql
+SELECT *
+FROM User u
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM Orders o
+    WHERE o.UserId = u.Id
+);
+```
+
 ---
 
 ## Сортировка - ORDER BY
@@ -318,12 +346,6 @@ WHERE Age > (SELECT AVG(Age) FROM User);
 
 Тут мы выбираем всех людей, у которых возраст больше среднего возраста всех людей.
 
-Так же есть калеризированные подзапросы, для этого нам нужно создать связную с нашей таблицу
-
-```sql
-
-```
-
 ## Коррелирующие подзапросы
 
 Создадим таблицу заказов, которая будет связана с таблицей пользователей:
@@ -405,4 +427,122 @@ SELECT
     (SELECT MAX(Price) FROM Orders o WHERE o.UserId = u.Id) AS MaxOrderPrice
 FROM 
     User u;
+```
+
+## Примеры запросов с IN и BETWEEN с подзапросами
+
+### Оператор IN с подзапросами
+
+Пример: Найти всех пользователей, которые делали заказы в первом квартале 2023 года:
+
+```sql
+SELECT *
+FROM User
+WHERE Id IN (
+    SELECT DISTINCT UserId
+    FROM Orders
+    WHERE OrderDate BETWEEN '2023-01-01' AND '2023-03-31'
+);
+```
+
+Пример: Найти все заказы пользователей из США:
+
+```sql
+SELECT *
+FROM Orders
+WHERE UserId IN (
+    SELECT Id
+    FROM User
+    WHERE Country = 'USA'
+);
+```
+
+Пример: Найти всех пользователей, которые не делали заказов дороже 500:
+
+```sql
+SELECT *
+FROM User
+WHERE Id NOT IN (
+    SELECT DISTINCT UserId
+    FROM Orders
+    WHERE Price > 500
+);
+```
+
+### Оператор BETWEEN с подзапросами
+
+Пример: Найти пользователей, возраст которых находится между минимальным и средним возрастом:
+
+```sql
+SELECT *
+FROM User
+WHERE Age BETWEEN (
+    SELECT MIN(Age) FROM User
+) AND (
+    SELECT AVG(Age) FROM User
+);
+```
+
+### Оператор EXISTS с подзапросами
+
+Оператор EXISTS позволяет проверять, существуют ли строки, возвращаемые подзапросом.
+
+Пример: Найти всех пользователей, которые сделали хотя бы один заказ:
+
+```sql
+SELECT *
+FROM User u
+WHERE EXISTS (
+    SELECT 1
+    FROM Orders o
+    WHERE o.UserId = u.Id
+);
+```
+
+Пример: Найти всех пользователей, которые не делали заказов:
+
+```sql
+SELECT *
+FROM User u
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM Orders o
+    WHERE o.UserId = u.Id
+);
+```
+
+Пример: Найти пользователей, которые делали заказы дороже 500:
+
+```sql
+SELECT *
+FROM User u
+WHERE EXISTS (
+    SELECT 1
+    FROM Orders o
+    WHERE o.UserId = u.Id AND o.Price > 500
+);
+```
+
+Пример: Найти страны, в которых есть пользователи, делавшие заказы:
+
+```sql
+SELECT DISTINCT u.Country
+FROM User u
+WHERE EXISTS (
+    SELECT 1
+    FROM Orders o
+    WHERE o.UserId = u.Id
+);
+```
+
+Пример: Найти все заказы сделанные пользователями из США:
+
+```sql
+SELECT *
+FROM Orders o
+WHERE EXISTS (
+    SELECT 1
+    FROM User u
+    WHERE u.Id = o.UserId AND u.Country = 'USA'
+);
 ```
